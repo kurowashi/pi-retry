@@ -26,9 +26,10 @@ interface Manifest {
 /** npm adds these on its own; everything else must be covered by the whitelist. */
 const ALWAYS_SHIPPED = new Set(["package.json", "README.md", "LICENSE"]);
 
+const MANIFEST = JSON.parse(readFileSync(join(PACKAGE_ROOT, "package.json"), "utf8")) as Manifest;
+
 test("the packed tarball matches the manifest whitelist", () => {
-	const manifest = JSON.parse(readFileSync(join(PACKAGE_ROOT, "package.json"), "utf8")) as Manifest;
-	const whitelist = manifest.files ?? [];
+	const whitelist = MANIFEST.files ?? [];
 	assert.ok(whitelist.length > 0, "package.json must declare a files whitelist");
 
 	const output = execFileSync("npm", ["pack", "--dry-run", "--json", "--ignore-scripts"], {
@@ -45,14 +46,15 @@ test("the packed tarball matches the manifest whitelist", () => {
 	);
 	assert.deepEqual(outsideWhitelist, [], "only whitelisted files and package metadata may be published");
 
-	for (const entry of manifest.pi?.extensions ?? []) {
+	for (const entry of MANIFEST.pi?.extensions ?? []) {
 		const normalized = entry.replace(/^\.\//, "");
 		assert.ok(shipped.includes(normalized), `pi.extensions entry ${entry} must be present in the tarball`);
 	}
 });
 
 test("ships TypeScript directly: no build step, the entry is the source file", () => {
-	const manifest = JSON.parse(readFileSync(join(PACKAGE_ROOT, "package.json"), "utf8")) as Manifest;
-	assert.equal(manifest.scripts?.["build"], undefined, "a build step would break TS-direct distribution");
-	assert.deepEqual(manifest.pi?.extensions, ["./src/index.ts"]);
+	for (const name of ["build", "prepack", "prepare", "prepublishOnly"]) {
+		assert.equal(MANIFEST.scripts?.[name], undefined, `a ${name} script would break TS-direct distribution`);
+	}
+	assert.deepEqual(MANIFEST.pi?.extensions, ["./src/index.ts"]);
 });
