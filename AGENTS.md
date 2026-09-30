@@ -40,7 +40,7 @@
 
 | 制約 | 検証 | 定義・実装箇所 |
 |---|---|---|
-| 失敗した試行のイベント(`start` を含む)は転送しない | `test/unit/retry.test.ts` | `src/retry.ts` の `forwardAttempt` |
+| 再試行する試行のイベント(`start` を含む)は転送しない | `test/unit/retry.test.ts` | `src/retry.ts` の `forwardAttempt` |
 | 正常試行は start・本文・終端をそのまま転送する | `test/unit/retry.test.ts` | `src/retry.ts` の `forwardAttempt` |
 | 終端イベントは1つだけ。失敗は error で閉じる | `test/unit/retry.test.ts` | `src/retry.ts` の `finishAttempt` |
 | 待機中の中断は aborted として閉じ、再試行しない | `test/unit/retry.test.ts` | `src/retry.ts` の `sleep` / `endWithAborted` |
@@ -52,6 +52,7 @@
 | 制約 | 検証 | 定義・実装箇所 |
 |---|---|---|
 | 実行時依存を持たない(`dependencies` は空) | `test/contract/dependencies.test.ts` | `package.json` |
+| peerDependency は Pi 提供パッケージのみ | `test/contract/dependencies.test.ts` | `test/contract/dependencies.test.ts` の `ALLOWED_PEER_DEPENDENCIES` |
 | `src` の import は node builtin・相対 `.ts`・Pi 提供パッケージのみ | `test/contract/dependencies.test.ts` | `test/contract/dependencies.test.ts` の `ALLOWED_PEER_DEPENDENCIES` |
 | devDependency は allowlist 内のみ | `test/contract/dependencies.test.ts` | `test/contract/dependencies.test.ts` の `ALLOWED_DEV_DEPENDENCIES` |
 
@@ -79,15 +80,15 @@
   契約が変更の入口になる。
 - 再試行の条件・待ち時間・試行回数を変える場合は `test/unit/retry.test.ts` を先に更新し、
   対応する [docs/adr/](docs/adr/) を同じコミットで更新する。
-- 依存を追加する場合は devDependency のみ可能。`ALLOWED_DEV_DEPENDENCIES` の更新とコミットメッセージの理由をセットで行う。
+- 依存を追加できるのは devDependency と、Pi が提供する peerDependency(`ALLOWED_PEER_DEPENDENCIES`)のみ。
+  devDependency は `ALLOWED_DEV_DEPENDENCIES` を更新し、コミットメッセージに理由を残す。
   実行時依存(`dependencies`)の追加は不可。
 - 決定の記録は `docs/adr/` に置く(1決定 = 1ファイル、`NNNN-<topic>.md`)。追加するのは、
   却下した代替を再提案されうる決定、機能や振る舞いを削除・置き換える決定、DESIGN.md / PHILOSOPHY.md に触れる決定のときだけ。
   却下案は結果ではなく理由を書く。
 - ツール・コマンド・設定・公開の振る舞いを変える前に `docs/adr/` を読み、却下済みの代替を再提案しない。
   決定が変わったら同じコミットで状態を更新する(採用 → 廃止)。
-- カバレッジの数値は契約テストの影響を受けます。契約テストは jiti 経由で `src` をもう一度ロードするため、
-  同じファイルが2実体として数えられます。
+- カバレッジの数値は契約テストの影響を受けません。計測対象は `test/unit` と `test/integration` です。
 - ドキュメントの段落内の改行は、文末(。！？)・読点(、)・コロン(:)の直後に置く。
 
 ## 手動確認項目(自動検証の対象外)
@@ -95,12 +96,7 @@
 前提: 実際の `google` プロバイダと、無料枠のレート制限を使います。
 
 1. 無料枠の `google/gemma-4-31b-it` で上限を超えるリクエストを送り、
-   429 の後にサーバー指定の時間だけ待って成功すること。
+   429 の後にサーバー指定時間 + 1秒(上限120秒)待って成功すること。
 2. `RetryInfo` を含まない恒久的なクォータ枯渇では、待たずに失敗すること。
 3. 待機中に Esc で中断すると `aborted` で終わり、再試行しないこと。
 4. コンパクションが走る長いセッションで 429 が出ても、要約が同じ待ち・再試行で完了すること。
-
-## このプラグインについて
-
-- 対応する Pi は 0.87.1 で動作確認しています。`registerProvider` の上書きと
-  `@earendil-works/pi-ai` の `googleGenerativeAIApi()` に依存します。

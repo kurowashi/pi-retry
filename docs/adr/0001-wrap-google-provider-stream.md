@@ -1,6 +1,8 @@
-# ADR 0001 — Google プロバイダのストリームを置き換えて再試行する
+# ADR 0001: Google プロバイダのストリームを置き換えて再試行する
 
-状態: 採用
+- 状態: 採用
+- 日付: 2026-10-01
+- 対象: `google` プロバイダのストリームと、再試行した試行の履歴への影響
 
 ## 背景
 
@@ -10,9 +12,10 @@ Pi のプロバイダ再試行は `Retry-After` ヘッダ前提で、Google は�
 
 ## 決定
 
-`pi.registerProvider("google", { api: "google-generative-ai", streamSimple })` で
-`google` プロバイダのストリームをラップし、サーバー指定の待ち時間で同じリクエストを再送します。
+`pi.registerProvider("google", { api: "google-generative-ai", streamSimple })` で `google` プロバイダのストリームをラップし、
+サーバー指定の待ち時間で同じリクエストを再送します。
 ラップする実装はホストの `@earendil-works/pi-ai` が公開する `googleGenerativeAIApi()` です。
+再試行する試行のイベントは転送せず、セッション履歴に入れません。
 
 ## 理由
 
@@ -26,6 +29,6 @@ Pi のプロバイダ再試行は `Retry-After` ヘッダ前提で、Google は�
   公開 API だけで完結し実装も小さいが、エージェントのターンしか対象にできず、
   コンパクションの要約は別経路のため直りません。失敗した試行も履歴に残ります。
 - 設定 `retry.provider.maxRetries` と `retry.provider.maxRetryDelayMs` の変更。
-  Google が `Retry-After` を返さないため、フォールバックのバックオフは最大8秒刻みで 55 秒を待てません。
+  Google が `Retry-After` を返さないため、フォールバックのバックオフは最大 8 秒刻みで 55 秒を待てません。
 - `message_end` でエラー文言から `quota exceeded` を消して Pi 本体の再試行に載せる案。
   分類は通るようになるが、待ち時間は Pi の指数バックオフで決まり、サーバー指定の窓を待てません。

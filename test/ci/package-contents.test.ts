@@ -20,6 +20,7 @@ import { PACKAGE_ROOT } from "../helpers/root.ts";
 interface Manifest {
 	files?: string[];
 	pi?: { extensions?: string[] };
+	scripts?: Record<string, string>;
 }
 
 /** npm adds these on its own; everything else must be covered by the whitelist. */
@@ -48,4 +49,10 @@ test("the packed tarball matches the manifest whitelist", () => {
 		const normalized = entry.replace(/^\.\//, "");
 		assert.ok(shipped.includes(normalized), `pi.extensions entry ${entry} must be present in the tarball`);
 	}
+});
+
+test("ships TypeScript directly: no build step, the entry is the source file", () => {
+	const manifest = JSON.parse(readFileSync(join(PACKAGE_ROOT, "package.json"), "utf8")) as Manifest;
+	assert.equal(manifest.scripts?.["build"], undefined, "a build step would break TS-direct distribution");
+	assert.deepEqual(manifest.pi?.extensions, ["./src/index.ts"]);
 });

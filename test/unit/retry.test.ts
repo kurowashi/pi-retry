@@ -15,7 +15,9 @@ import {
 	endSilently,
 	fail,
 	failAfterContent,
+	failAfterStart,
 	finalText,
+	firstText,
 	MODEL,
 	RETRYABLE_429,
 	script,
@@ -68,6 +70,17 @@ test("retries a pre-content failure after the server delay", async () => {
 	const events = await collect(withRetry(provider.inner, MODEL, CONTEXT, undefined, FAST));
 	assert.equal(provider.calls(), 2);
 	assert.ok(Date.now() - startedAt < 500, "the policy delay, not the default 1s, must be used");
+	assert.deepEqual(
+		events.map((event) => event.type),
+		["start", "text_delta", "done"],
+	);
+	assert.equal(finalText(events), "ok");
+});
+
+test("does not forward a discarded attempt's start event", async () => {
+	const provider = script(failAfterStart(RETRYABLE_429), succeed("ok"));
+	const events = await collect(withRetry(provider.inner, MODEL, CONTEXT, undefined, FAST));
+	assert.equal(provider.calls(), 2);
 	assert.deepEqual(
 		events.map((event) => event.type),
 		["start", "text_delta", "done"],
@@ -141,12 +154,14 @@ test("does not wait when the request is already aborted", async () => {
 
 test("ends with the accumulated message when the provider ends without a terminal event", async () => {
 	const provider = script(endSilently());
-	const events = await collect(withRetry(provider.inner, MODEL, CONTEXT, undefined, FAST));
+	const stream = withRetry(provider.inner, MODEL, CONTEXT, undefined, FAST);
+	const events = await collect(stream);
 	assert.equal(provider.calls(), 1);
 	assert.deepEqual(
 		events.map((event) => event.type),
 		["start"],
 	);
+	assert.equal(firstText(await stream.result()), "silent");
 });
 
 test("turns a synchronous provider throw into an error event", async () => {

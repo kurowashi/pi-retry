@@ -72,6 +72,18 @@ export function fail(errorMessage: string): StreamSimple {
 	};
 }
 
+/** A request that emitted a start event and was then rejected before any content. */
+export function failAfterStart(errorMessage: string): StreamSimple {
+	return () => {
+		const stream = createAssistantMessageEventStream();
+		stream.push({ type: "start", partial: assistant({}) });
+		const failed = assistant({ stopReason: "error", errorMessage });
+		stream.push({ type: "error", reason: "error", error: failed });
+		stream.end(failed);
+		return stream;
+	};
+}
+
 /** A request that streamed text and then failed mid-stream. */
 export function failAfterContent(errorMessage: string): StreamSimple {
 	return () => {
@@ -103,8 +115,9 @@ export function succeed(text: string): StreamSimple {
 export function endSilently(): StreamSimple {
 	return () => {
 		const stream = createAssistantMessageEventStream();
+		const content = [{ type: "text" as const, text: "silent" }];
 		stream.push({ type: "start", partial: assistant({}) });
-		stream.end(assistant({}));
+		stream.end(assistant({ content, stopReason: "stop" }));
 		return stream;
 	};
 }
@@ -137,6 +150,11 @@ export async function collect(stream: AssistantMessageEventStream): Promise<Assi
 export function finalText(events: AssistantMessageEvent[]): string {
 	const last = events.at(-1);
 	if (last?.type !== "done") return "";
-	const block = last.message.content[0];
+	return firstText(last.message);
+}
+
+/** The first text block of a message, or an empty string. */
+export function firstText(message: AssistantMessage): string {
+	const block = message.content[0];
 	return block?.type === "text" ? block.text : "";
 }
