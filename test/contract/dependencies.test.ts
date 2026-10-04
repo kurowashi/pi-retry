@@ -29,6 +29,7 @@ const ALLOWED_DEV_DEPENDENCIES = new Set([
 	"@earendil-works/pi-coding-agent",
 	"@earendil-works/pi-tui",
 	"@types/node",
+	"knip",
 	"lefthook",
 	"typebox",
 	"typescript",

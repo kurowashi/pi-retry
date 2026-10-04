@@ -16,7 +16,7 @@ import * as os from "node:os";
 import * as path from "node:path";
 import { DEFAULT_RETRY_POLICY } from "./retry.ts";
 
-export const CONFIG_FILE_NAME = "retry.json";
+const CONFIG_FILE_NAME = "retry.json";
 
 /** Upper bound for maxRetries; a larger value falls back to the default. */
 export const MAX_MAX_RETRIES = 10;
@@ -35,7 +35,7 @@ export interface LoadedRetryConfig {
 	projectFile: string;
 }
 
-export function agentDir(): string {
+function agentDir(): string {
 	const override = process.env["PI_CODING_AGENT_DIR"]?.trim();
 	return override && override.length > 0 ? override : path.join(os.homedir(), ".pi", "agent");
 }
