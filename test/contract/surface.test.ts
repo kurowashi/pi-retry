@@ -33,11 +33,16 @@ function onlyExtension(result: LoadExtensionsResult): Extension {
 	return extension;
 }
 
-test("no tools, commands, or event handlers are registered", async () => {
+test("no tools or commands are registered", async () => {
 	const extension = onlyExtension(await loadRetryExtension());
 	assert.deepEqual([...extension.tools.keys()], []);
 	assert.deepEqual([...extension.commands.keys()], []);
-	assert.deepEqual([...extension.handlers.keys()], []);
+});
+
+test("one session_start handler reloads the config", async () => {
+	const extension = onlyExtension(await loadRetryExtension());
+	assert.deepEqual([...extension.handlers.keys()], ["session_start"]);
+	assert.equal(extension.handlers.get("session_start")?.length, 1);
 });
 
 test("registers exactly one provider override: google / google-generative-ai", async () => {

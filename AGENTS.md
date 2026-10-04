@@ -21,7 +21,8 @@
 | 制約 | 検証 | 定義・実装箇所 |
 |---|---|---|
 | 登録はプロバイダ上書き1件だけ(`google` / `google-generative-ai`) | `test/contract/surface.test.ts` | `src/index.ts` の `RETRY_TARGET` |
-| ツール・コマンド・イベントハンドラを登録しない | `test/contract/surface.test.ts` | `src/index.ts` |
+| ツール・コマンドを登録しない | `test/contract/surface.test.ts` | `src/index.ts` |
+| `session_start` ハンドラは1つだけ | `test/contract/surface.test.ts` | `src/index.ts` の `registerRetryExtension` |
 | 上書きはホストの `googleGenerativeAIApi()` に委譲する | `test/integration/extension.test.ts` | `src/index.ts` の `googleRetryExtension` |
 
 ### 再試行の判断
@@ -46,6 +47,18 @@
 | 待機中の中断は aborted として閉じ、再試行しない | `test/unit/retry.test.ts` | `src/retry.ts` の `sleep` / `endWithAborted` |
 | 同期 throw は error イベントにして閉じる | `test/unit/retry.test.ts` | `src/retry.ts` の `forwardAttempt` |
 | 終端イベント無しで終わる実装は `result()` の値で閉じる | `test/unit/retry.test.ts` | `src/retry.ts` の `forwardAttempt` |
+
+### 設定
+
+| 制約 | 検証 | 定義・実装箇所 |
+|---|---|---|
+| 設定ファイルは `~/.pi/agent/retry.json` と信頼済み `<cwd>/.pi/retry.json` の2箇所で、プロジェクトが上書きする | `test/unit/config.test.ts` + `test/integration/extension.test.ts` | `src/config.ts` の `loadRetryConfig` |
+| 未信頼のプロジェクトのファイルは読まない | `test/unit/config.test.ts` + `test/integration/extension.test.ts` | `src/config.ts` の `loadRetryConfig` |
+| 設定できるのは `maxRetries`(0〜10の整数)だけ。待ち時間は固定 | `test/unit/config.test.ts` | `src/config.ts` の `resolveMaxRetries`、`src/retry.ts` の `DEFAULT_RETRY_POLICY` |
+| 不正な値・壊れた JSON・非オブジェクトは警告して既定値3で動く | `test/unit/config.test.ts` | `src/config.ts` の `readObject` / `resolveMaxRetries` |
+| 未知のキーは無視する | `test/unit/config.test.ts` | `src/config.ts` の `mergeFile` |
+| 読み込みは `session_start` ごとに行い、次のリクエストから反映する | `test/integration/extension.test.ts` | `src/index.ts` の `registerRetryExtension` |
+| 警告は UI にだけ出し、セッションを止めない | `test/integration/extension.test.ts` | `src/index.ts` の `registerRetryExtension` |
 
 ### 依存関係・import
 
@@ -80,6 +93,8 @@
   契約が変更の入口になる。
 - 再試行の条件・待ち時間・試行回数を変える場合は `test/unit/retry.test.ts` を先に更新し、
   対応する [docs/adr/](docs/adr/) を同じコミットで更新する。
+- 設定キーを増やす場合は `test/unit/config.test.ts` を先に更新し、ADR と README の設定表を同じコミットで更新する。
+  待ち時間は ADR 0002 のとおり固定に保つ。
 - 依存を追加できるのは devDependency と、Pi が提供する peerDependency(`ALLOWED_PEER_DEPENDENCIES`)のみ。
   devDependency は `ALLOWED_DEV_DEPENDENCIES` を更新し、コミットメッセージに理由を残す。
   実行時依存(`dependencies`)の追加は不可。
@@ -100,3 +115,5 @@
 2. `RetryInfo` を含まない恒久的なクォータ枯渇では、待たずに失敗すること。
 3. 待機中に Esc で中断すると `aborted` で終わり、再試行しないこと。
 4. コンパクションが走る長いセッションで 429 が出ても、要約が同じ待ち・再試行で完了すること。
+5. `retry.json` の `maxRetries` を変えて `/reload` し、次のリクエストから新しい回数で再試行されること。
+6. 不正な値や壊れた JSON を書いても警告だけでセッションが続き、既定値で動くこと。
