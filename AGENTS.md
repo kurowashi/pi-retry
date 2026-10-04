@@ -58,7 +58,7 @@
 | 設定できるのは `maxRetries`(0〜10の整数)だけ | `test/unit/config.test.ts` | `src/config.ts` の `resolveMaxRetries` |
 | 待ち時間(マージン・上限)は固定 | `test/unit/retry.test.ts` | `src/retry.ts` の `DEFAULT_RETRY_POLICY` |
 | 不正な値は警告して既定値3で動く | `test/unit/config.test.ts` | `src/config.ts` の `resolveMaxRetries` |
-| 壊れた JSON・オブジェクト以外の JSON・読めないファイルは警告して無視する | `test/unit/config.test.ts` | `src/config.ts` の `readObject` |
+| 壊れた JSON・オブジェクト以外の JSON・読めないファイルは警告してそのファイルを無視し、マージ済みの値で動く | `test/unit/config.test.ts` | `src/config.ts` の `readObject` |
 | 未知のキーは無視する | `test/unit/config.test.ts` | `src/config.ts` の `mergeFile` |
 | 読み込みは `session_start` ごとに行い、次のリクエストから反映する | `test/integration/extension.test.ts` | `src/index.ts` の `registerRetryExtension` |
 | 警告は UI にだけ出し、セッションを止めない | `test/integration/extension.test.ts` | `src/index.ts` の `registerRetryExtension` |
@@ -120,4 +120,5 @@
 3. 待機中に Esc で中断すると `aborted` で終わり、再試行しないこと。
 4. コンパクションが走る長いセッションで 429 が出ても、要約が同じ待ち・再試行で完了すること。
 5. `retry.json` の `maxRetries` を変えて `/reload` し、次のリクエストから新しい回数で再試行されること。
-6. 不正な値や壊れた JSON を書いても警告だけでセッションが続き、既定値で動くこと。
+6. 不正な値(`{"maxRetries": "many"}`)は警告だけでセッションが続き、既定値3で動くこと。
+   壊れた JSON や読めないファイルは警告だけでそのファイルが無視され、他の設定または既定値で動くこと。

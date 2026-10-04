@@ -127,6 +127,26 @@ test("unreadable config paths warn and keep the default", () => {
 	});
 });
 
+test("a broken project file is ignored and the global value stays", () => {
+	sandbox((box) => {
+		write(path.join(box.home, "retry.json"), { maxRetries: 5 });
+		write(path.join(box.cwd, ".pi", "retry.json"), "{ nope");
+		const loaded = loadRetryConfig(box.cwd, true);
+		assert.equal(loaded.config.maxRetries, 5);
+		assert.equal(loaded.warnings.length, 1);
+	});
+});
+
+test("an invalid project value falls back to the default, not the global value", () => {
+	sandbox((box) => {
+		write(path.join(box.home, "retry.json"), { maxRetries: 5 });
+		write(path.join(box.cwd, ".pi", "retry.json"), { maxRetries: "many" });
+		const loaded = loadRetryConfig(box.cwd, true);
+		assert.equal(loaded.config.maxRetries, DEFAULT_RETRY_CONFIG.maxRetries);
+		assert.equal(loaded.warnings.length, 1);
+	});
+});
+
 test("broken JSON warns and keeps the default", () => {
 	sandbox((box) => {
 		write(path.join(box.home, "retry.json"), "{ nope");
