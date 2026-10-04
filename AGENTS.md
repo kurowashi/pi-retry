@@ -52,10 +52,13 @@
 
 | 制約 | 検証 | 定義・実装箇所 |
 |---|---|---|
-| 設定ファイルは `~/.pi/agent/retry.json` と信頼済み `<cwd>/.pi/retry.json` の2箇所で、プロジェクトが上書きする | `test/unit/config.test.ts` + `test/integration/extension.test.ts` | `src/config.ts` の `loadRetryConfig` |
+| 設定ファイルは `~/.pi/agent/retry.json`(または `$PI_CODING_AGENT_DIR/retry.json`) と信頼済み `<cwd>/.pi/retry.json` の2箇所 | `test/unit/config.test.ts` | `src/config.ts` の `loadRetryConfig` |
+| プロジェクトの値が全体の値を上書きする | `test/unit/config.test.ts` + `test/integration/extension.test.ts` | `src/config.ts` の `loadRetryConfig` |
 | 未信頼のプロジェクトのファイルは読まない | `test/unit/config.test.ts` + `test/integration/extension.test.ts` | `src/config.ts` の `loadRetryConfig` |
-| 設定できるのは `maxRetries`(0〜10の整数)だけ。待ち時間は固定 | `test/unit/config.test.ts` | `src/config.ts` の `resolveMaxRetries`、`src/retry.ts` の `DEFAULT_RETRY_POLICY` |
-| 不正な値・壊れた JSON・非オブジェクトは警告して既定値3で動く | `test/unit/config.test.ts` | `src/config.ts` の `readObject` / `resolveMaxRetries` |
+| 設定できるのは `maxRetries`(0〜10の整数)だけ | `test/unit/config.test.ts` | `src/config.ts` の `resolveMaxRetries` |
+| 待ち時間(マージン・上限)は固定 | `test/unit/retry.test.ts` | `src/retry.ts` の `DEFAULT_RETRY_POLICY` |
+| 不正な値は警告して既定値3で動く | `test/unit/config.test.ts` | `src/config.ts` の `resolveMaxRetries` |
+| 壊れた JSON・オブジェクト以外の JSON・読めないファイルは警告して無視する | `test/unit/config.test.ts` | `src/config.ts` の `readObject` |
 | 未知のキーは無視する | `test/unit/config.test.ts` | `src/config.ts` の `mergeFile` |
 | 読み込みは `session_start` ごとに行い、次のリクエストから反映する | `test/integration/extension.test.ts` | `src/index.ts` の `registerRetryExtension` |
 | 警告は UI にだけ出し、セッションを止めない | `test/integration/extension.test.ts` | `src/index.ts` の `registerRetryExtension` |
@@ -95,6 +98,7 @@
   対応する [docs/adr/](docs/adr/) を同じコミットで更新する。
 - 設定キーを増やす場合は `test/unit/config.test.ts` を先に更新し、ADR と README の設定表を同じコミットで更新する。
   待ち時間は ADR 0002 のとおり固定に保つ。
+- 既定値(`maxRetries` の3)を変える場合は、README・AGENTS・テスト・ADR を同じコミットで更新する。
 - 依存を追加できるのは devDependency と、Pi が提供する peerDependency(`ALLOWED_PEER_DEPENDENCIES`)のみ。
   devDependency は `ALLOWED_DEV_DEPENDENCIES` を更新し、コミットメッセージに理由を残す。
   実行時依存(`dependencies`)の追加は不可。

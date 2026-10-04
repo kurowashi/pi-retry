@@ -69,8 +69,11 @@ function readObject(file: string, warnings: string[]): Record<string, unknown> |
 	let text: string;
 	try {
 		text = fs.readFileSync(file, "utf8");
-	} catch {
-		// A missing file is the normal case.
+	} catch (error) {
+		// A missing file is the normal case; anything else is worth a warning.
+		if (!isMissingFile(error)) {
+			warnings.push(`${file}: ${messageOf(error)}; ignored`);
+		}
 		return undefined;
 	}
 	try {
@@ -81,9 +84,19 @@ function readObject(file: string, warnings: string[]): Record<string, unknown> |
 		}
 		return parsed as Record<string, unknown>;
 	} catch (error) {
-		warnings.push(`${file}: ${error instanceof Error ? error.message : String(error)}; ignored`);
+		warnings.push(`${file}: ${messageOf(error)}; ignored`);
 		return undefined;
 	}
+}
+
+function isMissingFile(error: unknown): boolean {
+	if (typeof error !== "object" || error === null) return false;
+	const code = (error as { code?: unknown }).code;
+	return code === "ENOENT" || code === "ENOTDIR";
+}
+
+function messageOf(error: unknown): string {
+	return error instanceof Error ? error.message : String(error);
 }
 
 function resolveMaxRetries(value: unknown, file: string, warnings: string[]): number | undefined {

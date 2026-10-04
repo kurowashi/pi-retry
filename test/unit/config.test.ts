@@ -117,6 +117,16 @@ test("invalid maxRetries values warn and fall back to the default", () => {
 	}
 });
 
+test("unreadable config paths warn and keep the default", () => {
+	sandbox((box) => {
+		fs.mkdirSync(path.join(box.home, "retry.json"), { recursive: true });
+		const loaded = loadRetryConfig(box.cwd, true);
+		assert.deepEqual(loaded.config, DEFAULT_RETRY_CONFIG);
+		assert.equal(loaded.warnings.length, 1);
+		assert.match(loaded.warnings[0] ?? "", /retry\.json: .*ignored/);
+	});
+});
+
 test("broken JSON warns and keeps the default", () => {
 	sandbox((box) => {
 		write(path.join(box.home, "retry.json"), "{ nope");
